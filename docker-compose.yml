@@ -15,6 +15,7 @@ services:
       - discovery.seed_hosts=es02,es03
       - bootstrap.memory_lock=true
       - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
     mem_limit: ${MEM_LIMIT}
     ulimits:
       memlock:
@@ -44,6 +45,7 @@ services:
       - discovery.seed_hosts=es01,es03
       - bootstrap.memory_lock=true
       - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
     mem_limit: ${MEM_LIMIT}
     ulimits:
       memlock:
@@ -73,6 +75,7 @@ services:
       - discovery.seed_hosts=es01,es02
       - bootstrap.memory_lock=true
       - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
     mem_limit: ${MEM_LIMIT}
     ulimits:
       memlock:
@@ -118,6 +121,16 @@ services:
       timeout: 10s
       retries: 120
 
+  metricbeat:
+    container_name: metricbeat
+    image: docker.elastic.co/beats/metricbeat:${STACK_VERSION}
+    environment:
+      ELASTICSEARCH_HOSTS: http://elastic-01:9200
+    volumes:
+      - metricbeat-data01:/usr/share/metricbeat/data
+    depends_on:
+      - es01
+
 volumes:
   certs:
     driver: local
@@ -128,4 +141,6 @@ volumes:
   esdata03:
     driver: local
   kibanadata:
+    driver: local
+  metricbeat-data01:
     driver: local

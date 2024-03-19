@@ -1,37 +1,57 @@
-DELETE queries
+DELETE cars
 
-PUT /queries
+DELETE cars-queries
+
+PUT cars 
 {
   "mappings": {
     "properties": {
-      "query": {
-        "type": "percolator"
-      },
-      "brand": { "type": "text" }
+      "brand" : { "type" : "keyword" },
+      "model" : { "type" : "keyword" },
+      "price" : { "type" : "long" }
     }
   }
 }
 
-PUT /documents
-{
-  "mappings": {
-    "properties": {
-      "first_name": { "type": "text" },
-      "last_name": { "type": "text"},
-      "state_code": { "type": "text"}
-      }
-    }
-  }
-}
-
-POST /my_document_index/_doc/1
+POST /cars/_doc/2
 {
   "brand": "Tesla",
-  "model": "Model 3"
+  "model": "4"
 }
 
-// add sample query to queries index
-PUT my_queries_index/_doc/tesla_model_3_alert
+GET cars/_search
+{
+  "query" : {
+    "query_string" : {
+      "query" : "model:3"
+    }
+  }
+}
+
+GET cars/_search
+{
+  "query" : {
+    "query_string" : {
+      "query" : "model:3 AND brand:Tesla"
+    }
+  }
+}
+
+PUT cars-queries
+{
+  "mappings": {
+    "properties": {
+      "query" : {
+        "type" : "percolator"
+      },
+      "brand" : { "type" : "keyword" },
+      "model" : { "type" : "keyword" },
+      "price" : { "type" : "long" }
+    }
+  }
+}
+
+PUT cars-queries/_doc/tesla_alert
 {
   "query" : {
     "query_string" : {
@@ -40,13 +60,24 @@ PUT my_queries_index/_doc/tesla_model_3_alert
   }
 }
 
-GET my_queries_index/_search
+PUT cars-queries/_doc/tesla_model3_alert
+{
+  "query" : {
+    "query_string" : {
+      "query" : "brand:Tesla AND model:3"
+    }
+  }
+}
+
+GET cars-queries/_search
 {
   "query": {
     "percolate": {
       "field": "query",
-      "index" : "my_document_index",
-      "id" : "1"
+      "index" : "cars",
+      "id" : "2"
     }
   }
 }
+
+
