@@ -1,40 +1,43 @@
-version: "2.2"
+version: "3.8"
 
 services:
+  # Elasticsearch Node 1 Configuration
   es01:
     container_name: elastic-01
-    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}  # Elasticsearch image with version from environment variable
     volumes:
-      - esdata01:/usr/share/elasticsearch/data
+      - esdata01:/usr/share/elasticsearch/data  # Persistent storage volume for Elasticsearch data
     ports:
-      - ${ES_PORT}:9200
+      - ${ES_PORT}:9200  # Expose Elasticsearch on configured port
     environment:
-      - node.name=es01
-      - cluster.name=${CLUSTER_NAME}
-      - cluster.initial_master_nodes=es01,es02,es03
-      - discovery.seed_hosts=es02,es03
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=false
-      - xpack.monitoring.collection.enabled=true
-    mem_limit: ${MEM_LIMIT}
+      - node.name=es01  # Node name within the Elasticsearch cluster
+      - cluster.name=${CLUSTER_NAME}  # Cluster name, should be the same across all nodes
+      - cluster.initial_master_nodes=es01,es02,es03  # Initial master nodes for cluster formation
+      - discovery.seed_hosts=es02,es03  # Seed hosts for node discovery
+      - bootstrap.memory_lock=true  # Lock the memory to prevent swapping
+      - xpack.security.enabled=${SECURITY_ENABLED}  # disable X-Pack security
+      - xpack.security.audit.enabled=true
+      - xpack.monitoring.collection.enabled=true  # Enable monitoring collection
+    mem_limit: ${MEM_LIMIT}  # Memory limit for the container
     ulimits:
       memlock:
         soft: -1
-        hard: -1
+        hard: -1  # Remove memory swapping limit
     healthcheck:
       test:
         [
           "CMD-SHELL",
           "curl -s localhost:9200/_cat/health | grep -q 'green'",
-        ]
+        ]  # Health check to ensure Elasticsearch is running correctly
       interval: 10s
       timeout: 10s
       retries: 120
 
+  # Elasticsearch Node 2 Configuration
   es02:
     container_name: elastic-02
     depends_on:
-      - es01
+      - es01  # Depends on the first Elasticsearch node to start
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - esdata02:/usr/share/elasticsearch/data
@@ -44,7 +47,8 @@ services:
       - cluster.initial_master_nodes=es01,es02,es03
       - discovery.seed_hosts=es01,es03
       - bootstrap.memory_lock=true
-      - xpack.security.enabled=false
+      - xpack.security.enabled=${SECURITY_ENABLED}  # disable X-Pack security
+      - xpack.security.audit.enabled=true
       - xpack.monitoring.collection.enabled=true
     mem_limit: ${MEM_LIMIT}
     ulimits:
@@ -61,10 +65,11 @@ services:
       timeout: 10s
       retries: 120
 
+  # Elasticsearch Node 3 Configuration
   es03:
     container_name: elastic-03
     depends_on:
-      - es02
+      - es02  # Depends on the second Elasticsearch node to start
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - esdata03:/usr/share/elasticsearch/data
@@ -74,7 +79,7 @@ services:
       - cluster.initial_master_nodes=es01,es02,es03
       - discovery.seed_hosts=es01,es02
       - bootstrap.memory_lock=true
-      - xpack.security.enabled=false
+      - xpack.security.enabled=${SECURITY_ENABLED}  # disable X-Pack security
       - xpack.monitoring.collection.enabled=true
     mem_limit: ${MEM_LIMIT}
     ulimits:
@@ -91,6 +96,7 @@ services:
       timeout: 10s
       retries: 120
 
+  # Kibana Configuration
   kibana:
     container_name: kibana
     depends_on:
@@ -99,43 +105,42 @@ services:
       es02:
         condition: service_healthy
       es03:
-        condition: service_healthy
+        condition: service_healthy  # Depends on all Elasticsearch nodes being healthy
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
     volumes:
-      - kibanadata:/usr/share/kibana/data
+      - kibanadata:/usr/share/kibana/data  # Persistent storage for Kibana
     ports:
-      - ${KIBANA_PORT}:5601
+      - ${KIBANA_PORT}:5601  # Expose Kibana on configured port
     environment:
       - SERVERNAME=kibana
-      - ELASTICSEARCH_HOSTS=http://elastic-01:9200
-      - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_HOSTS=http://elastic-01:9200  # URL for the Elasticsearch backend
+      - ELASTICSEARCH_USERNAME=system  # Default Kibana user
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}  # Password for Kibana user, from environment variable
     mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         [
           "CMD-SHELL",
           "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
-        ]
+        ]  # Health check for Kibana
       interval: 10s
       timeout: 10s
       retries: 120
 
+  # Metricbeat Configuration
   metricbeat:
     container_name: metricbeat
-    image: docker.elastic.co/beats/metricbeat:${STACK_VERSION}
+    image: docker.elastic.co/beats/metricbeat:${STACK_VERSION}  # Metricbeat image with version from environment variable
     environment:
-      ELASTICSEARCH_HOSTS: http://elastic-01:9200
+      ELASTICSEARCH_HOSTS: http://elastic-01:9200  # Elasticsearch URL for Metricbeat to connect
     volumes:
-      - metricbeat-data01:/usr/share/metricbeat/data
+      - metricbeat-data01:/usr/share/metricbeat/data  # Persistent storage for Metricbeat
     depends_on:
-      - es01
+      - es01  # Metricbeat depends on the first Elasticsearch node
 
 volumes:
-  certs:
-    driver: local
   esdata01:
-    driver: local
+    driver: local  # Defines the driver for persistent storage
   esdata02:
     driver: local
   esdata03:
